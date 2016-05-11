@@ -55,6 +55,8 @@ public class TCPClientWorker implements Runnable
                 Log.LogError(Log.SUBTYPE.SYSTEM, "Client disconnected");
             }
         }
+
+        NetworkController.clients.remove(client.getPid());
     }
 
 }

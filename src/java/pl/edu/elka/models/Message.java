@@ -8,12 +8,17 @@ import java.util.StringTokenizer;
  */
 public class Message {
 
-    public enum Type{REQUEST, REPLY, HANDSHAKE};
+    public enum Type{REQUEST, REPLY, HANDSHAKE, ACKHANDSHAKE};
     private Type type;
     private Date timestamp;
     private String from;
     private String to;
     private String info;
+
+    @Override
+    public String toString() {
+        return "Type: " +type.toString() +". Timestamp: "+timestamp.toString() +". To: "+to+". From: "+from;
+    }
 
     public Message(Type type, String from, String to, String info){
         this.type = type;

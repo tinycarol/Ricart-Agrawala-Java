@@ -7,7 +7,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Simple TCP server used to control the robot remotely. Allows multiple and concurrent clients.
@@ -41,16 +40,16 @@ public class TCPServer implements Runnable {
      * @param data
      */
     public void write(String data) {
-        for (Node client : NetworkController.nodes.values()) {
+        for (Node client : NetworkController.clients.values()) {
             if (client.getSocket().isClosed()) {
-                NetworkController.nodes.remove(client.getPid());
+                NetworkController.clients.remove(client.getPid());
                 continue;
             }
             try {
                 DataOutputStream outToClient = new DataOutputStream(client.getSocket().getOutputStream());
                 outToClient.writeBytes(data);
             } catch (IOException e) {
-                NetworkController.nodes.remove(client.getPid());
+                NetworkController.clients.remove(client.getPid());
                 Log.LogError(Log.SUBTYPE.SYSTEM, "Error writing to clients: " + e.getMessage());
             }
         }
@@ -82,12 +81,12 @@ public class TCPServer implements Runnable {
             Socket clientSocket = null;
             try {
                 clientSocket = socket.accept();
-                Node newClient = new Node(null, clientSocket);
+                Node newClient = new Node(null, clientSocket, false);
                 new Thread(new TCPClientWorker(newClient)).start();
                 Log.LogEvent(Log.SUBTYPE.SYSTEM, "Client connected to server");
-                for (Node client : NetworkController.nodes.values()) {
+                for (Node client : NetworkController.clients.values()) {
                     if (client.getSocket().isClosed()) {
-                        NetworkController.nodes.remove(client.getPid());
+                        NetworkController.clients.remove(client.getPid());
                     }
                 }
             } catch (IOException e) {

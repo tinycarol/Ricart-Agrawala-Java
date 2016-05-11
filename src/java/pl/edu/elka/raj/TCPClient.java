@@ -7,6 +7,7 @@ import pl.edu.elka.models.Node;
 import pl.edu.elka.util.Log;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 /**
@@ -36,20 +37,24 @@ public class TCPClient implements Runnable {
 
     public void run() {
         try {
-            clientSocket = new Socket(address, port);
-            server = new Node(null, clientSocket);
+
+            clientSocket = new Socket();
+            clientSocket.connect(new InetSocketAddress(address, port), 1000);
+            server = new Node(null, clientSocket, true);
             BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             BufferedWriter outToServer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-            String json =new Gson().toJson(new Message(Message.Type.HANDSHAKE, Main.pid, null, null));
-            outToServer.write(json);
+            Message messageSent = new Message(Message.Type.HANDSHAKE, Main.pid, null, null);
+            Log.LogEvent(Log.SUBTYPE.ROUTING, "Message sent: "+messageSent);
+            outToServer.write(new Gson().toJson(messageSent));
             outToServer.flush();
             while (!clientSocket.isClosed()) {
                 NetworkController.processMessage(server, inFromServer.readLine());
             }
 
         } catch (Exception e) {
-            Log.LogError(Log.SUBTYPE.CLIENTSOCKET, e.getMessage());
+            Log.LogError(Log.SUBTYPE.CLIENTSOCKET, "Message: " + e.getMessage());
+        } finally {
+            NetworkController.restartClient();
         }
-        NetworkController.restartClient();
     }
 }

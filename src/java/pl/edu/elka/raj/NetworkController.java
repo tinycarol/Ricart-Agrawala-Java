@@ -7,7 +7,6 @@ import pl.edu.elka.util.IdGenerator;
 import pl.edu.elka.util.Log;
 
 import java.io.BufferedWriter;
-import java.io.DataOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,15 +18,15 @@ import java.util.Map;
 public class NetworkController {
     private static TCPServer server;
     private static TCPClient client;
-    public static Map<String, Node> nodes;
+    public static Map<String, Node> clients;
 
-    public NetworkController(){
+    public NetworkController() {
         server = new TCPServer(Integer.parseInt(Main.propertiesManager.getProperty("port")));
         client = new TCPClient(getParent());
-        nodes = Collections.synchronizedMap(new HashMap<String, Node>());
+        clients = Collections.synchronizedMap(new HashMap<String, Node>());
     }
 
-    public static void start(){
+    public static void start() {
         client = new TCPClient(getParent());
         Thread serverThread = new Thread(server);
         serverThread.start();
@@ -35,7 +34,7 @@ public class NetworkController {
         clientThread.start();
     }
 
-    public static void restartClient(){
+    public static void restartClient() {
         client = new TCPClient(getParent());
         Thread clientThread = new Thread(client);
         clientThread.start();
@@ -45,12 +44,13 @@ public class NetworkController {
     private static int getIndex() {
         int result = 0;
         String[] nodes = Main.propertiesManager.getArray("nodes");
-        String location = Main.propertiesManager.getProperty("address")+":"+Main.propertiesManager.getProperty("port");
-        for(int i = 0; i<nodes.length;i++){
+        String location = Main.propertiesManager.getProperty("address") + ":" + Main.propertiesManager.getProperty("port");
+        for (int i = 0; i < nodes.length; i++) {
             if (location.equals(nodes[i])) {
                 return i;
             }
-        };
+        }
+        ;
         return -1;
     }
 
@@ -59,46 +59,56 @@ public class NetworkController {
         int parentIndex = index;
         String[] nodes = Main.propertiesManager.getArray("nodes");
         do
-            parentIndex = IdGenerator.getRandomInt(0,nodes.length-1);
+            parentIndex = IdGenerator.getRandomInt(0, nodes.length - 1);
         while (parentIndex == index);
         return nodes[parentIndex];
-    };
+    }
 
-    public static void processMessage(Node node, String line) throws Exception{
+    ;
+
+    public static void processMessage(Node node, String line) throws Exception {
         Message message = new Gson().fromJson(line, Message.class);
-        if(message.getType()!=Message.Type.HANDSHAKE && !message.getTo().equals(Main.pid)){
+        if (message.getType() != Message.Type.HANDSHAKE && !message.getTo().equals(Main.pid)) {
             Log.LogEvent(Log.SUBTYPE.ROUTING, "Not for me :(");
             broadcast(message, node);
             return;
         }
-        Log.LogEvent(Log.SUBTYPE.ROUTING, "Message:"+message.toString());
-        switch(message.getType()){
-            case HANDSHAKE:{
+        Log.LogEvent(Log.SUBTYPE.ROUTING, "Message received: " + message.toString());
+        String[] allNodes = Main.propertiesManager.getArray("nodes");
+        switch (message.getType()) {
+            case HANDSHAKE: {
                 node.setPid(message.getFrom());
-                if(client.getServer().getPid()==null || !node.getPid().equals(client.getServer().getPid())){
-                    nodes.put(node.getPid(),node);
-                }
-                if(message.getTo() == null){
+                // The client of the server I'm connected to is trying to connect to my server
+                if ( message.getFrom().equals(client.getServer().getPid()) ) {
+                    Log.LogWarning(Log.SUBTYPE.ROUTING, "Loop detected");
+                    node.getSocket().close();
+                }else {
+                    clients.put(message.getFrom(), node);
                     BufferedWriter toNode = new BufferedWriter(new OutputStreamWriter(node.getSocket().getOutputStream()));
-                    toNode.write(new Gson().toJson(new Message(Message.Type.HANDSHAKE, Main.pid, node.getPid(), null)));
+                    Message messageSent = new Message(Message.Type.ACKHANDSHAKE, Main.pid, node.getPid(), null);
+                    Log.LogEvent(Log.SUBTYPE.ROUTING, "Message sent: " + messageSent);
+                    toNode.write(new Gson().toJson(messageSent));
                     toNode.flush();
-                }else{
-                    String[] allNodes = Main.propertiesManager.getArray("nodes");
-                    if(allNodes.length>2 && message.getFrom().equals(client.getServer().getPid()) && nodes.containsKey(message.getFrom())){
-                        Log.LogWarning(Log.SUBTYPE.ROUTING, "Loop detected");
-                        nodes.get(message.getFrom()).getSocket().close();
-                        node.getSocket().close();
-                    }
                 }
-                return;
+                break;
             }
-
-            default: return;
+            case ACKHANDSHAKE:{
+                // The client of the server I'm connected to is trying to connect to my server
+                if (clients.containsKey(message.getFrom())) {
+                    Log.LogWarning(Log.SUBTYPE.ROUTING, "Loop detected");
+                    node.getSocket().close();
+                }else {
+                    client.getServer().setPid(message.getFrom());
+                }
+                break;
+            }
+            default:
+                return;
         }
 
     }
 
-    public static void broadcast(Message message, Node excluded){
+    public static void broadcast(Message message, Node excluded) {
 
     }
 }
