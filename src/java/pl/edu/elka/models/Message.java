@@ -1,5 +1,7 @@
 package pl.edu.elka.models;
 
+import pl.edu.elka.raj.Main;
+
 import java.util.Date;
 import java.util.StringTokenizer;
 
@@ -8,16 +10,25 @@ import java.util.StringTokenizer;
  */
 public class Message {
 
-    public enum Type{REQUEST, REPLY, HANDSHAKE, ACKHANDSHAKE};
+    public enum Type{REQUEST, REPLY, HANDSHAKE, ACKHANDSHAKE, ELECTION, ANSWER, COORDINATOR};
     private Type type;
     private Date timestamp;
     private String from;
     private String to;
     private String info;
+    private int ttl;
 
     @Override
     public String toString() {
         return "Type: " +type.toString() +". Timestamp: "+timestamp.toString() +". To: "+to+". From: "+from;
+    }
+
+    public int getTtl() {
+        return ttl;
+    }
+
+    public void setTtl(int ttl) {
+        this.ttl = ttl;
     }
 
     public Message(Type type, String from, String to, String info){
@@ -26,6 +37,8 @@ public class Message {
         this.to = to;
         this.info = info;
         this.timestamp = new Date();
+        this.ttl = Main.propertiesManager.getArray("nodes").length;
+
     }
 
     public String getFrom() {

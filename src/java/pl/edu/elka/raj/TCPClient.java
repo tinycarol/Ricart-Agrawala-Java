@@ -37,7 +37,6 @@ public class TCPClient implements Runnable {
 
     public void run() {
         try {
-
             clientSocket = new Socket();
             clientSocket.connect(new InetSocketAddress(address, port), 1000);
             server = new Node(null, clientSocket, true);
@@ -50,7 +49,6 @@ public class TCPClient implements Runnable {
             while (!clientSocket.isClosed()) {
                 NetworkController.processMessage(server, inFromServer.readLine());
             }
-
         } catch (Exception e) {
             Log.LogError(Log.SUBTYPE.CLIENTSOCKET, "Message: " + e.getMessage());
         } finally {

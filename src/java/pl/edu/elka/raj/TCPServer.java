@@ -50,10 +50,10 @@ public class TCPServer implements Runnable {
                 outToClient.writeBytes(data);
             } catch (IOException e) {
                 NetworkController.clients.remove(client.getPid());
+                client.close();
                 Log.LogError(Log.SUBTYPE.SYSTEM, "Error writing to clients: " + e.getMessage());
             }
         }
-
     }
 
     /**

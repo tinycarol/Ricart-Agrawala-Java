@@ -13,7 +13,7 @@ import java.util.Calendar;
 public class Log {
 
     public enum TYPE { ERROR, EVENT, WARNING }
-    public enum SUBTYPE { ROUTING, SYSTEM, PROPERTIES, CLIENTSOCKET }
+    public enum SUBTYPE { ROUTING, SYSTEM, PROPERTIES, CLIENTSOCKET, ELECTION }
 
     public static void LogEvent(SUBTYPE subtype, String message)
     {

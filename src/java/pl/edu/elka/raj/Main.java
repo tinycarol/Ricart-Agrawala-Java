@@ -12,8 +12,9 @@ public class Main {
     public static String pid;
 
     public static void main(String[] args){
-        pid = IdGenerator.generate();
+
         propertiesManager = new PropertiesManager();
+        pid = propertiesManager.getProperty("pid");
         networkController = new NetworkController();
         networkController.start();
     }

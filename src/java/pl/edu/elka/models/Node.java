@@ -1,7 +1,10 @@
 package pl.edu.elka.models;
 
+import com.google.gson.Gson;
 import pl.edu.elka.util.Log;
 
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 
 /**
@@ -32,7 +35,15 @@ public class Node {
     public void setPid(String pid) {
         this.pid = pid;
     }
-    
+
+    public void write(Message message) throws Exception{
+        BufferedWriter toNode = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+        Log.LogEvent(Log.SUBTYPE.ROUTING, "Message sent: " + message);
+        toNode.write(new Gson().toJson(message));
+        toNode.flush();
+
+    }
+
     public void close(){
         try {
             socket.getInputStream().close();
@@ -43,5 +54,10 @@ public class Node {
         } catch (Exception e){
             Log.LogError(Log.SUBTYPE.SYSTEM, "Problem closing socket. Message: "+e.getMessage());
         }
+    }
+
+    @Override
+    public boolean equals(Object obj){
+        return obj!=null && ((Node)obj).getPid().equals(pid);
     }
 }
