@@ -1,6 +1,7 @@
 package pl.edu.elka.models;
 
 import com.google.gson.Gson;
+import pl.edu.elka.raj.Main;
 import pl.edu.elka.util.Log;
 
 import java.io.BufferedWriter;
@@ -38,8 +39,7 @@ public class Node {
 
     public void write(Message message) throws Exception{
         BufferedWriter toNode = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-        Log.LogEvent(Log.SUBTYPE.ROUTING, "Message sent: " + message);
-        toNode.write(new Gson().toJson(message));
+        toNode.write(new Gson().toJson(message)+"\r\n");
         toNode.flush();
 
     }

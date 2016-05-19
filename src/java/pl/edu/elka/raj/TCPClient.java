@@ -44,7 +44,7 @@ public class TCPClient implements Runnable {
             BufferedWriter outToServer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             Message messageSent = new Message(Message.Type.HANDSHAKE, Main.pid, null, null);
             Log.LogEvent(Log.SUBTYPE.ROUTING, "Message sent: "+messageSent);
-            outToServer.write(new Gson().toJson(messageSent));
+            outToServer.write(new Gson().toJson(messageSent)+"\r\n");
             outToServer.flush();
             while (!clientSocket.isClosed()) {
                 NetworkController.processMessage(server, inFromServer.readLine());

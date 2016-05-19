@@ -8,9 +8,19 @@ import java.util.StringTokenizer;
 /**
  * Created by carol on 15/04/2016.
  */
-public class Message {
+public class Message implements Comparable<Message> {
 
-    public enum Type{REQUEST, REPLY, HANDSHAKE, ACKHANDSHAKE, ELECTION, ANSWER, COORDINATOR};
+    public int compareTo(Message o) {
+        if(o.getTimestamp().after(timestamp)){
+            return -1;
+        }else if(o.getTimestamp().before(timestamp)){
+            return 1;
+        }else{
+            return 0;
+        }
+    }
+
+    public enum Type{REQUEST, REPLY, HANDSHAKE, ACKHANDSHAKE, ELECTION, ANSWER, COORDINATOR, WANTED, ACCEPT};
     private Type type;
     private Date timestamp;
     private String from;

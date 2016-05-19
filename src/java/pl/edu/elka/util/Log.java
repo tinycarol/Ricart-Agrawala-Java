@@ -13,7 +13,7 @@ import java.util.Calendar;
 public class Log {
 
     public enum TYPE { ERROR, EVENT, WARNING }
-    public enum SUBTYPE { ROUTING, SYSTEM, PROPERTIES, CLIENTSOCKET, ELECTION }
+    public enum SUBTYPE { ROUTING, SYSTEM, PROPERTIES, CLIENTSOCKET, ELECTION, WANTED, CRITICALSECTION }
 
     public static void LogEvent(SUBTYPE subtype, String message)
     {
@@ -24,13 +24,13 @@ public class Log {
     public static void LogWarning(SUBTYPE subtype, String message)
     {
         String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar.getInstance().getTime());
-        System.out.println("[" + timeStamp + "]" + "[" + TYPE.WARNING.toString() + "][" + subtype.toString() + "] " + message);
+        //System.out.println("[" + timeStamp + "]" + "[" + TYPE.WARNING.toString() + "][" + subtype.toString() + "] " + message);
     }
 
     public static void LogError(SUBTYPE subtype, String message)
     {
         String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar.getInstance().getTime());
-        System.out.println("[" + timeStamp + "]" + "[" + TYPE.ERROR.toString() + "][" + subtype.toString() + "] " + message);
+        //System.out.println("[" + timeStamp + "]" + "[" + TYPE.ERROR.toString() + "][" + subtype.toString() + "] " + message);
     }
 
 }
