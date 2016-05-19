@@ -1,7 +1,5 @@
 package pl.edu.elka.raj;
 
-import com.google.gson.Gson;
-import javafx.scene.chart.PieChart;
 import pl.edu.elka.models.Message;
 import pl.edu.elka.models.Node;
 import pl.edu.elka.util.Log;
@@ -41,18 +39,15 @@ public class TCPClient implements Runnable {
             clientSocket.connect(new InetSocketAddress(address, port), 1000);
             server = new Node(null, clientSocket, true);
             BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            BufferedWriter outToServer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             Message messageSent = new Message(Message.Type.HANDSHAKE, Main.pid, null, null);
             Log.LogEvent(Log.SUBTYPE.ROUTING, "Message sent: "+messageSent);
-            outToServer.write(new Gson().toJson(messageSent)+"\r\n");
-            outToServer.flush();
+            server.write(messageSent);
             while (!clientSocket.isClosed()) {
                 NetworkController.processMessage(server, inFromServer.readLine());
             }
         } catch (Exception e) {
             Log.LogError(Log.SUBTYPE.CLIENTSOCKET, "Message: " + e.getMessage());
-        } finally {
-            NetworkController.restartClient();
         }
+        NetworkController.restartClient();
     }
 }

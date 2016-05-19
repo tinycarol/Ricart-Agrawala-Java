@@ -16,7 +16,7 @@ public class NetworkController {
     private static TCPServer server;
     private static TCPClient client;
     public static Map<String, Node> clients;
-    private static boolean pendingElection = true;
+    private static volatile boolean pendingElection = true;
     private static Timer electionTimer;
     private static boolean isElectionTimerRunning;
     private static String coordinator;
@@ -33,6 +33,9 @@ public class NetworkController {
     private static Timer wantedTimeout;
     private static boolean isWantedTimeoutRunning;
     private static long coordOffset;
+
+    private static Thread clientThread;
+    private static Thread serverThread;
 
     public NetworkController() {
         server = new TCPServer(Integer.parseInt(PropertiesManager.getProperty("port")));
@@ -54,18 +57,20 @@ public class NetworkController {
 
     public static void start() {
         client = new TCPClient(getParent());
-        Thread serverThread = new Thread(server);
+        serverThread = new Thread(server);
         serverThread.start();
-        Thread clientThread = new Thread(client);
+        clientThread = new Thread(client);
         clientThread.start();
     }
 
     public static void restartClient() {
-        if (client.getServer() != null) {
-            client.getServer().close();
+        try {
+            clientThread.join();
+        } catch(Exception e){
+            Log.LogError(Log.SUBTYPE.SYSTEM, "Error joining thread: " + e.getMessage());
         }
         client = new TCPClient(getParent());
-        Thread clientThread = new Thread(client);
+        clientThread = new Thread(client);
         clientThread.start();
 
     }
@@ -94,7 +99,7 @@ public class NetworkController {
 
     public static void processMessage(Node node, String line) throws Exception {
         Message message = new Gson().fromJson(line, Message.class);
-        if (message == null || message.getTtl() < 1 || message.getFrom().equals(PropertiesManager.getProperty("pid"))) {
+        if (message == null || message.getTtl() < 1 || message.getFrom().equals(Main.pid)) {
             return;
         } else {
             message.setTtl(message.getTtl() - 1);
@@ -107,14 +112,13 @@ public class NetworkController {
             }
         }
         Log.LogEvent(Log.SUBTYPE.ROUTING, "RECEIVED: " + message.toString());
-        String[] allNodes = PropertiesManager.getArray("nodes");
         switch (message.getType()) {
             case HANDSHAKE: {
                 node.setPid(message.getFrom());
                 // The client of the server I'm connected to is trying to connect to my server
-                if (message.getFrom().equals(client.getServer().getPid())) {
+                if (client.getServer() != null && message.getFrom().equals(client.getServer().getPid())) {
                     Log.LogWarning(Log.SUBTYPE.ROUTING, "Loop detected");
-                    restartClient();
+                    client.getServer().close();
                     node.getSocket().close();
                 } else {
                     clients.put(message.getFrom(), node);
@@ -127,7 +131,7 @@ public class NetworkController {
                 // The client of the server I'm connected to is trying to connect to my server
                 if (clients.containsKey(message.getFrom())) {
                     Log.LogWarning(Log.SUBTYPE.ROUTING, "Loop detected");
-                    restartClient();
+                    client.getServer().close();
                     node.getSocket().close();
                 } else {
                     client.getServer().setPid(message.getFrom());
@@ -151,7 +155,7 @@ public class NetworkController {
                 break;
             }
             case COORDINATOR: {
-                if(Integer.parseInt(message.getFrom())>Integer.parseInt(PropertiesManager.getProperty("pid"))){
+                if(Integer.parseInt(message.getFrom())>Integer.parseInt(Main.pid)){
                     election();
                     return;
                 }
@@ -168,17 +172,15 @@ public class NetworkController {
                 if(state == STATE.RELEASED || (lastRequested.after(message.getTimestamp()))){
                     Message response = new Message(Message.Type.ACCEPT, Main.pid, message.getFrom(), null);
                     send(response, null);
-                    return;
                 }else{
                     messages.add(message);
                 }
                 break;
             }
             case ACCEPT:{
-                if(state != STATE.WANTED)
-                    return;
+                if(state != STATE.WANTED) return;
                 answered.add(message.getFrom());
-                if(PropertiesManager.getArray("nodes")!=null && answered.size() == PropertiesManager.getArray("nodes").length-1){
+                if(PropertiesManager.getArray("nodes")!=null && answered.size() == Main.nodes.length-1){
                     answered.clear();
                     enterCriticalSection();
                 }
@@ -205,14 +207,14 @@ public class NetworkController {
     }
 
     private static void leaveCriticalSection() {
+        Log.LogEvent(Log.SUBTYPE.CRITICALSECTION, "Leaving critical section");
         state = STATE.RELEASED;
         while(!messages.isEmpty()){
             Message pendingMessage = messages.remove();
             Message releasedMessage = new Message(Message.Type.ACCEPT, Main.pid, pendingMessage.getFrom(), null);
             send(releasedMessage, null);
         }
-        Log.LogEvent(Log.SUBTYPE.CRITICALSECTION, "Leaving critical section");
-
+        messages.clear();
     }
 
     private static void requestCriticalSection(int delay){
@@ -229,9 +231,11 @@ public class NetworkController {
                 send(wantedMessage, null);
                 wantedTimeout.schedule(new TimerTask() {
                     public void run() {
+                        isWantedTimeoutRunning = false;
+                        Log.LogWarning(Log.SUBTYPE.CRITICALSECTION, "Token lost, starting election");
                         election();
                     }
-                }, 15000* PropertiesManager.getArray("nodes").length);
+                }, 15000* Main.nodes.length);
             }
         }, delay);
     }
@@ -242,7 +246,7 @@ public class NetworkController {
         coordinator = "-1";
         pendingElection = true;
         Log.LogEvent(Log.SUBTYPE.ELECTION, "Election time! Forcing out of critical section");
-        for (int i = 0; i < Integer.parseInt(PropertiesManager.getProperty("pid")); i++) {
+        for (int i = 0; i < Integer.parseInt(Main.pid); i++) {
             Message electionMsg = new Message(Message.Type.ELECTION, Main.pid, i + "", null);
             send(electionMsg, null);
         }
@@ -250,14 +254,12 @@ public class NetworkController {
         electionTimer.schedule(new TimerTask() {
             public void run() {
                 isElectionTimerRunning = false;
-                if (!pendingElection) {
-                    return;
-                }
+                if (!pendingElection) return;
                 Message coordinatorMsg = new Message(Message.Type.COORDINATOR, Main.pid, "-1", null);
                 send(coordinatorMsg, null);
                 Log.LogEvent(Log.SUBTYPE.ELECTION, "No response, I am the coordinator");
                 pendingElection = false;
-                coordinator = PropertiesManager.getProperty("pid");
+                coordinator = Main.pid;
                 requestCriticalSection(0);
             }
         }, Integer.parseInt(PropertiesManager.getProperty("electionTimeout")));
@@ -288,7 +290,7 @@ public class NetworkController {
     }
 
     public static void send(Message message, Node excluded) {
-        if(message.getFrom().equals(PropertiesManager.getProperty("pid"))){
+        if(message.getFrom().equals(Main.pid)){
             Log.LogEvent(Log.SUBTYPE.ROUTING, "SENT: " + message);
         }
         for (Node node : clients.values()) {
@@ -296,7 +298,7 @@ public class NetworkController {
                 try {
                     node.write(message);
                 } catch (Exception e) {
-                    Log.LogError(Log.SUBTYPE.SYSTEM, e.getMessage());
+                    Log.LogError(Log.SUBTYPE.SYSTEM, "Error writing to socket: " + e.getMessage());
                 }
             }
         }
@@ -304,7 +306,7 @@ public class NetworkController {
             try {
                 client.getServer().write(message);
             } catch (Exception e) {
-                Log.LogError(Log.SUBTYPE.SYSTEM, e.getMessage());
+                Log.LogError(Log.SUBTYPE.SYSTEM, "Error writing to socket: " + e.getMessage());
             }
         }
     }

@@ -82,7 +82,8 @@ public class TCPServer implements Runnable {
             try {
                 clientSocket = socket.accept();
                 Node newClient = new Node(null, clientSocket, false);
-                new Thread(new TCPClientWorker(newClient)).start();
+                Thread workerThread = new Thread(new TCPClientWorker(newClient));
+                workerThread.start();
                 Log.LogEvent(Log.SUBTYPE.SYSTEM, "Client connected to server");
                 for (Node client : NetworkController.clients.values()) {
                     if (client.getSocket().isClosed()) {

@@ -41,13 +41,28 @@ public class Message implements Comparable<Message> {
         this.ttl = ttl;
     }
 
+    @Override
+    public int hashCode() {
+        int result = type.hashCode();
+        result = 31 * result + timestamp.hashCode();
+        result = 31 * result + from.hashCode();
+        result = 31 * result + (to != null ? to.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        Message another = (Message)o;
+        return o != null && to.equals(another.getTo()) && from.equals(another.getFrom()) && timestamp.equals(another.getTimestamp()) && type == another.getType();
+    }
+
     public Message(Type type, String from, String to, String info){
         this.type = type;
         this.from = from;
         this.to = to;
         this.info = info;
         this.timestamp = new Date();
-        this.ttl = Main.propertiesManager.getArray("nodes").length;
+        this.ttl = Main.nodes.length;
 
     }
 
