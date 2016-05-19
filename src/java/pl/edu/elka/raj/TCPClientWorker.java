@@ -57,6 +57,7 @@ public class TCPClientWorker implements Runnable
         }
 
         NetworkController.clients.remove(client.getPid());
+        NetworkController.election();
     }
 
 }
