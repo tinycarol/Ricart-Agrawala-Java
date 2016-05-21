@@ -40,14 +40,14 @@ public class TCPClient implements Runnable {
             server = new Node(null, clientSocket, true);
             BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             Message messageSent = new Message(Message.Type.HANDSHAKE, Main.pid, null, null);
-            Log.LogEvent(Log.SUBTYPE.ROUTING, "Message sent: "+messageSent);
             server.write(messageSent);
             while (!clientSocket.isClosed()) {
                 NetworkController.processMessage(server, inFromServer.readLine());
             }
         } catch (Exception e) {
             Log.LogError(Log.SUBTYPE.CLIENTSOCKET, "Message: " + e.getMessage());
+        } finally {
+            NetworkController.restartClient();
         }
-        NetworkController.restartClient();
     }
 }

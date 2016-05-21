@@ -35,8 +35,7 @@ public class TCPClientWorker implements Runnable
         {
             try
             {
-                BufferedReader inFromClient = new BufferedReader(new InputStreamReader(
-                        client.getSocket().getInputStream()));
+                BufferedReader inFromClient = new BufferedReader(new InputStreamReader(client.getSocket().getInputStream()));
                 String data = inFromClient.readLine();
                 if (data == null) {
                     return;

@@ -65,14 +65,13 @@ public class NetworkController {
 
     public static void restartClient() {
         try {
-            clientThread.join();
+            client.getServer().close();
         } catch(Exception e){
-            Log.LogError(Log.SUBTYPE.SYSTEM, "Error joining thread: " + e.getMessage());
+            Log.LogError(Log.SUBTYPE.SYSTEM, "Error closing client: " + e.getMessage());
         }
         client = new TCPClient(getParent());
         clientThread = new Thread(client);
         clientThread.start();
-
     }
 
     private static int getIndex() {
@@ -111,7 +110,6 @@ public class NetworkController {
                 return;
             }
         }
-        Log.LogEvent(Log.SUBTYPE.ROUTING, "RECEIVED: " + message.toString());
         switch (message.getType()) {
             case HANDSHAKE: {
                 node.setPid(message.getFrom());
@@ -223,12 +221,15 @@ public class NetworkController {
         isReqCSTimerRunning = true;
         requestCSTimer.schedule(new TimerTask() {
             public void run() {
+                Log.LogEvent(Log.SUBTYPE.CRITICALSECTION, "Requesting access to critical section");
+                answered.clear();
                 isReqCSTimerRunning = false;
                 state = STATE.WANTED;
                 Message wantedMessage = new Message(Message.Type.WANTED, Main.pid, "-1", null);
                 lastRequested = new Date(wantedMessage.getTimestamp().getTime()-coordOffset);
                 wantedMessage.setTimestamp(lastRequested);
                 send(wantedMessage, null);
+                isWantedTimeoutRunning = true;
                 wantedTimeout.schedule(new TimerTask() {
                     public void run() {
                         isWantedTimeoutRunning = false;
@@ -290,9 +291,6 @@ public class NetworkController {
     }
 
     public static void send(Message message, Node excluded) {
-        if(message.getFrom().equals(Main.pid)){
-            Log.LogEvent(Log.SUBTYPE.ROUTING, "SENT: " + message);
-        }
         for (Node node : clients.values()) {
             if (!node.equals(excluded)) {
                 try {
@@ -306,7 +304,8 @@ public class NetworkController {
             try {
                 client.getServer().write(message);
             } catch (Exception e) {
-                Log.LogError(Log.SUBTYPE.SYSTEM, "Error writing to socket: " + e.getMessage());
+                NetworkController.restartClient();
+                Log.LogError(Log.SUBTYPE.CLIENTSOCKET, "Error writing to socket: " + e.getMessage());
             }
         }
     }

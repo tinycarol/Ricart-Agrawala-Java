@@ -19,18 +19,19 @@ public class Log {
     {
         String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar.getInstance().getTime());
         System.out.println("[" + timeStamp + "]" + "[" + TYPE.EVENT.toString() + "][" + subtype.toString() + "] " + message);
+
     }
 
     public static void LogWarning(SUBTYPE subtype, String message)
     {
         String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar.getInstance().getTime());
-        //System.out.println("[" + timeStamp + "]" + "[" + TYPE.WARNING.toString() + "][" + subtype.toString() + "] " + message);
+        System.out.println("[" + timeStamp + "]" + "[" + TYPE.WARNING.toString() + "][" + subtype.toString() + "] " + message);
     }
 
     public static void LogError(SUBTYPE subtype, String message)
     {
         String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar.getInstance().getTime());
-        //System.out.println("[" + timeStamp + "]" + "[" + TYPE.ERROR.toString() + "][" + subtype.toString() + "] " + message);
+        System.out.println("[" + timeStamp + "]" + "[" + TYPE.ERROR.toString() + "][" + subtype.toString() + "] " + message);
     }
 
 }

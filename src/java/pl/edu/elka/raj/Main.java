@@ -1,6 +1,5 @@
 package pl.edu.elka.raj;
 
-import pl.edu.elka.util.IdGenerator;
 import pl.edu.elka.util.PropertiesManager;
 
 /**

@@ -16,7 +16,7 @@ public class PropertiesManager
         try
         {
 
-            input = new FileInputStream("./src/config/config.properties");
+            input = new FileInputStream("config.properties");
             properties.load(input);
 
         }
